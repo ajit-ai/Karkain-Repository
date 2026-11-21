@@ -1,0 +1,14 @@
+// Karkain-Repository runnable example: a small user repository.
+import repository
+
+func main() {
+    let users = new_repository()
+    users = insert(users, 1, "alice")
+    users = insert(users, 2, "bob")
+    users = insert(users, 3, "carol")
+
+    println(describe_record(users, 1))
+    println(describe_record(users, 3))
+    println("count=" + str(count(users)))
+    println("ids=" + str(len(all_ids(users))))
+}

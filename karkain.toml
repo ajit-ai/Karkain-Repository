@@ -1,0 +1,7 @@
+name = "karkain-repository"
+version = "0.1.0-dev"
+description = "Repository pattern data access abstraction for Karkain"
+license = "MIT"
+targets = ["native"]
+
+[dependencies]

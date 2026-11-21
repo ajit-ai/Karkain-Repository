@@ -1,0 +1,112 @@
+// Karkain-Repository - data access abstraction over in-memory records.
+// Karkain Language v1.2.0 verified baseline (tag v1.2.0,
+// commit 77d70693e1e3134dac312a303bffafa7d50fa988).
+//
+// Scope boundary: v1.2.0 has no persistent object store in the stable
+// subset. This framework provides a deterministic repository abstraction
+// over arrays; hosts can adapt it to their own storage.
+//
+// Repository representation: pairs [id, value, id, value, ...].
+// Arrays are values; mutating functions return the updated repository.
+
+// new_repository returns an empty repository.
+public func new_repository() {
+    return []
+}
+
+// insert adds or replaces a record by id.
+public func insert(repository, id, value) {
+    let out = remove_record(repository, id)
+    out = push(out, id)
+    out = push(out, value)
+    return out
+}
+
+// remove_record deletes a record by id.
+public func remove_record(repository, id) {
+    let out = []
+    let i = 0
+    while (i < len(repository)) {
+        if repository[i] == id {
+            i = i + 2
+        } else {
+            out = push(out, repository[i])
+            out = push(out, repository[i + 1])
+            i = i + 2
+        }
+    }
+    return out
+}
+
+// find returns the value for an id, or a fallback when absent.
+public func find(repository, id, fallback) {
+    let i = 0
+    while (i < len(repository)) {
+        if repository[i] == id {
+            return repository[i + 1]
+        }
+        i = i + 2
+    }
+    return fallback
+}
+
+// find_required returns the value for an id, or "" when absent.
+public func find_required(repository, id) {
+    return find(repository, id, "")
+}
+
+// update replaces a value only when the id exists.
+public func update(repository, id, value) {
+    if has_record(repository, id) == false {
+        return repository
+    }
+    let out = []
+    let i = 0
+    while (i < len(repository)) {
+        if repository[i] == id {
+            out = push(out, repository[i])
+            out = push(out, value)
+        } else {
+            out = push(out, repository[i])
+            out = push(out, repository[i + 1])
+        }
+        i = i + 2
+    }
+    return out
+}
+
+// has_record reports whether an id exists.
+public func has_record(repository, id) {
+    let i = 0
+    while (i < len(repository)) {
+        if repository[i] == id {
+            return true
+        }
+        i = i + 2
+    }
+    return false
+}
+
+// count returns the number of records.
+public func count(repository) {
+    return len(repository) / 2
+}
+
+// all_ids returns the ids in insertion order.
+public func all_ids(repository) {
+    let out = []
+    let i = 0
+    while (i < len(repository)) {
+        out = push(out, repository[i])
+        i = i + 2
+    }
+    return out
+}
+
+// describe_record builds a one-line record diagnostic.
+public func describe_record(repository, id) {
+    if has_record(repository, id) == false {
+        return "#" + str(id) + " -> <missing>"
+    }
+    return "#" + str(id) + " -> " + str(find_required(repository, id))
+}

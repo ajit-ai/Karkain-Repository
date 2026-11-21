@@ -1,0 +1,62 @@
+// Native tests for Karkain-Repository.
+
+func sample_repo() {
+    let r = insert(new_repository(), 1, "alice")
+    return insert(r, 2, "bob")
+}
+
+func test_new_repository() {
+    assert_eq(count(new_repository()), 0)
+    assert(has_record(new_repository(), 1) == false)
+}
+
+func test_insert_and_count() {
+    let r = sample_repo()
+    assert_eq(count(r), 2)
+    assert(has_record(r, 1))
+}
+
+func test_find() {
+    let r = sample_repo()
+    assert_eq(find_required(r, 1), "alice")
+    assert_eq(find(r, 9, "fallback"), "fallback")
+    assert_eq(find_required(r, 9), "")
+}
+
+func test_insert_replaces() {
+    let r = insert(sample_repo(), 1, "alice2")
+    assert_eq(count(r), 2)
+    assert_eq(find_required(r, 1), "alice2")
+}
+
+func test_update_existing() {
+    let r = update(sample_repo(), 2, "robert")
+    assert_eq(find_required(r, 2), "robert")
+    assert_eq(find_required(sample_repo(), 2), "bob")
+}
+
+func test_update_missing_noop() {
+    let r = update(sample_repo(), 9, "nobody")
+    assert_eq(count(r), 2)
+    assert(has_record(r, 9) == false)
+}
+
+func test_remove_record() {
+    let r = remove_record(sample_repo(), 1)
+    assert_eq(count(r), 1)
+    assert(has_record(r, 1) == false)
+    assert(has_record(r, 2))
+}
+
+func test_all_ids() {
+    let ids = all_ids(sample_repo())
+    assert_eq(len(ids), 2)
+    assert_eq(ids[0], 1)
+    assert_eq(ids[1], 2)
+}
+
+func test_describe_record() {
+    let r = sample_repo()
+    assert_eq(describe_record(r, 1), "#1 -> alice")
+    assert_eq(describe_record(r, 9), "#9 -> <missing>")
+}
