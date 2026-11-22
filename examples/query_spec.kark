@@ -1,0 +1,19 @@
+// Karkain-Repository Phase 2 example: in-process query specifications.
+import repository
+
+func main() {
+    let repo = insert_bulk(new_repository(), [1, 2, 3, 4], ["alice", "bob", "alice", "carol"])
+    let spec = spec_page(spec_sort(spec_filter(new_spec(), "name", "alice"), "id", "ASC"), 0, 10)
+
+    println("valid=" + str(validate_spec(spec)))
+    let matched = filtered_ids(repo, "alice")
+    println("matched=" + str(len(matched)))
+    let page = page_ids(matched, 0, 1)
+    println("page=" + str(len(page)))
+
+    let tx = tx_begin(new_transaction())
+    println("tx=" + tx_state(tx_commit(tx)))
+
+    let provider = new_provider("in-process", "crud,query")
+    println("persist=" + str(provider_supports(provider, "persist")))
+}

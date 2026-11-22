@@ -60,3 +60,94 @@ func test_describe_record() {
     assert_eq(describe_record(r, 1), "#1 -> alice")
     assert_eq(describe_record(r, 9), "#9 -> <missing>")
 }
+
+// --- Phase 2 regression ---
+
+func test_phase1_regression() {
+    let r = insert(new_repository(), 1, "alice")
+    assert_eq(count(r), 1)
+    assert_eq(find_required(r, 1), "alice")
+    assert_eq(find(r, 9, "none"), "none")
+    let u = update(r, 1, "bob")
+    assert_eq(find_required(u, 1), "bob")
+}
+
+// --- Phase 2 additions ---
+
+func test_contract() {
+    let c = new_contract("users", "user")
+    assert_eq(contract_name(c), "users")
+    assert_eq(contract_entity(c), "user")
+}
+
+func test_query_spec() {
+    let s = spec_page(spec_sort(spec_filter(new_spec(), "name", "alice"), "id", "ASC"), 0, 10)
+    assert_eq(spec_count(s), 3)
+    assert(validate_spec(s))
+    let bad = spec_filter(new_spec(), "x", "y")
+    assert(validate_spec(bad))
+}
+
+func test_filter_and_sort() {
+    let r = insert_bulk(new_repository(), [1, 2, 3], ["alice", "bob", "alice"])
+    let ids = filtered_ids(r, "alice")
+    assert_eq(len(ids), 2)
+    assert_eq(ids[0], 1)
+    assert_eq(ids[1], 3)
+    let asc = sorted_ids(r, "ASC")
+    assert_eq(asc[0], 1)
+    let desc = sorted_ids(r, "DESC")
+    assert_eq(desc[0], 3)
+}
+
+func test_pagination() {
+    let r = insert_bulk(new_repository(), [1, 2, 3, 4], ["a", "b", "c", "d"])
+    let p = page_ids(all_ids(r), 1, 2)
+    assert_eq(len(p), 2)
+    assert_eq(p[0], 2)
+    assert_eq(len(page_ids(all_ids(r), 10, 2)), 0)
+    assert_eq(len(page_ids(all_ids(r), 0, -1)), 0)
+}
+
+func test_bulk_operations() {
+    let r = insert_bulk(new_repository(), [1, 2], ["a", "b"])
+    assert_eq(count(r), 2)
+    let removed = remove_bulk(r, [1])
+    assert_eq(count(removed), 1)
+    assert(has_record(removed, 2))
+}
+
+func test_results_and_errors() {
+    let ok = new_result(true, "value", 0)
+    assert(result_ok(ok))
+    assert_eq(result_value(ok), "value")
+    assert_eq(result_code(ok), 0)
+    assert_eq(repo_error(1), "not_found")
+    assert_eq(repo_error(2), "duplicate")
+    assert_eq(repo_error(99), "unknown")
+}
+
+func test_transactions() {
+    let t = tx_begin(new_transaction())
+    assert_eq(tx_state(t), "active")
+    assert_eq(tx_state(tx_commit(t)), "committed")
+    assert_eq(tx_state(tx_rollback(t)), "rolled_back")
+}
+
+func test_provider_and_cache() {
+    let p = new_provider("in-process", "crud,query")
+    assert(provider_supports(p, "crud"))
+    assert(provider_supports(p, "persist") == false)
+    let c = cache_set(cache_set(new_cache(), "k", "v"), "k", "v2")
+    assert_eq(cache_get(c, "k", ""), "v2")
+    assert_eq(cache_get(c, "none", "x"), "x")
+}
+
+func test_composition() {
+    let a = insert(new_repository(), 1, "a")
+    let b = insert(new_repository(), 2, "b")
+    let c = compose_repositories(a, b)
+    assert_eq(count(c), 2)
+    assert(has_record(c, 1))
+    assert(has_record(c, 2))
+}

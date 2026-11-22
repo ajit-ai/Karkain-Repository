@@ -110,3 +110,251 @@ public func describe_record(repository, id) {
     }
     return "#" + str(id) + " -> " + str(find_required(repository, id))
 }
+
+// ---------------------------------------------------------------------------
+// Phase 2 additions. Phase 1 CRUD API is unchanged. The adapter below is an
+// explicitly in-process test adapter, not durable persistence.
+
+// new_contract creates a named repository contract for an entity.
+public func new_contract(name, entity) {
+    let c = []
+    c = push(c, name)
+    c = push(c, entity)
+    return c
+}
+
+// contract_name returns the repository name.
+public func contract_name(contract) { return contract[0] }
+
+// contract_entity returns the entity name.
+public func contract_entity(contract) { return contract[1] }
+
+// new_spec creates an empty query specification.
+public func new_spec() {
+    return []
+}
+
+// spec_filter appends a filter clause (field/value pairs).
+public func spec_filter(spec, field, value) {
+    let out = spec
+    out = push(out, "filter")
+    out = push(out, field)
+    out = push(out, value)
+    return out
+}
+
+// spec_sort appends a sort clause.
+public func spec_sort(spec, field, direction) {
+    let out = spec
+    out = push(out, "sort")
+    out = push(out, field)
+    out = push(out, direction)
+    return out
+}
+
+// spec_page appends a page clause.
+public func spec_page(spec, offset, limit) {
+    let out = spec
+    out = push(out, "page")
+    out = push(out, offset)
+    out = push(out, limit)
+    return out
+}
+
+// spec_count returns the number of clauses.
+public func spec_count(spec) {
+    return len(spec) / 3
+}
+
+// validate_spec rejects specifications with unknown clause kinds.
+public func validate_spec(spec) {
+    let i = 0
+    while (i < len(spec)) {
+        if spec[i] != "filter" {
+            if spec[i] != "sort" {
+                if spec[i] != "page" { return false }
+            }
+        }
+        i = i + 3
+    }
+    return true
+}
+
+// filtered_ids returns ids whose stored value equals a filter value.
+public func filtered_ids(repository, value) {
+    let out = []
+    let i = 0
+    while (i < len(repository)) {
+        if str(repository[i + 1]) == value {
+            out = push(out, repository[i])
+        }
+        i = i + 2
+    }
+    return out
+}
+
+// sorted_ids returns ids in insertion order (ASC) or reverse (DESC).
+public func sorted_ids(repository, direction) {
+    let out = all_ids(repository)
+    if direction != "DESC" { return out }
+    let rev = []
+    let i = len(out) - 1
+    while (i >= 0) {
+        rev = push(rev, out[i])
+        i = i - 1
+    }
+    return rev
+}
+
+// page_ids slices an id array with offset and limit.
+public func page_ids(ids, offset, limit) {
+    let out = []
+    let start = offset
+    if start < 0 { start = 0 }
+    let end = start + limit
+    if limit < 0 { return out }
+    let i = start
+    while (i < end) {
+        if i >= len(ids) { return out }
+        out = push(out, ids[i])
+        i = i + 1
+    }
+    return out
+}
+
+// insert_bulk inserts parallel id/value arrays.
+public func insert_bulk(repository, ids, values) {
+    let out = repository
+    let i = 0
+    while (i < len(ids)) {
+        out = insert(out, ids[i], values[i])
+        i = i + 1
+    }
+    return out
+}
+
+// remove_bulk removes each id in a list.
+public func remove_bulk(repository, ids) {
+    let out = repository
+    let i = 0
+    while (i < len(ids)) {
+        out = remove_record(out, ids[i])
+        i = i + 1
+    }
+    return out
+}
+
+// new_result builds a result triple [ok, value, code].
+public func new_result(ok, value, code) {
+    let r = []
+    r = push(r, ok)
+    r = push(r, value)
+    r = push(r, code)
+    return r
+}
+
+// result_ok reports whether a result succeeded.
+public func result_ok(result) { return result[0] }
+
+// result_value returns a result value.
+public func result_value(result) { return result[1] }
+
+// result_code returns a result status code.
+public func result_code(result) { return result[2] }
+
+// repo_error maps error codes to stable names.
+public func repo_error(code) {
+    if code == 1 { return "not_found" }
+    if code == 2 { return "duplicate" }
+    if code == 3 { return "invalid_spec" }
+    return "unknown"
+}
+
+// new_transaction creates a transaction in the created state.
+public func new_transaction() {
+    let t = []
+    t = push(t, "created")
+    return t
+}
+
+// tx_begin marks a transaction active.
+public func tx_begin(transaction) {
+    return new_transaction_with_state("active")
+}
+
+// new_transaction_with_state builds a transaction with an explicit state.
+public func new_transaction_with_state(state) {
+    let t = []
+    t = push(t, state)
+    return t
+}
+
+// tx_commit marks a transaction committed.
+public func tx_commit(transaction) {
+    return new_transaction_with_state("committed")
+}
+
+// tx_rollback marks a transaction rolled back.
+public func tx_rollback(transaction) {
+    return new_transaction_with_state("rolled_back")
+}
+
+// tx_state returns the transaction state.
+public func tx_state(transaction) { return transaction[0] }
+
+// new_provider declares a provider with capability metadata.
+public func new_provider(name, capabilities) {
+    let p = []
+    p = push(p, name)
+    p = push(p, capabilities)
+    return p
+}
+
+// provider_supports reports whether a capability is advertised.
+public func provider_supports(provider, capability) {
+    return contains(provider[1], capability)
+}
+
+// new_cache creates an empty result cache.
+public func new_cache() {
+    return []
+}
+
+// cache_set stores a cached value for a key.
+public func cache_set(cache, key, value) {
+    let out = []
+    out = push(out, key)
+    out = push(out, value)
+    let i = 0
+    while (i < len(cache)) {
+        if cache[i] == key {
+            i = i + 2
+        } else {
+            out = push(out, cache[i])
+            out = push(out, cache[i + 1])
+            i = i + 2
+        }
+    }
+    return out
+}
+
+// cache_get returns a cached value or a fallback.
+public func cache_get(cache, key, fallback) {
+    let i = 0
+    while (i < len(cache)) {
+        if cache[i] == key { return cache[i + 1] }
+        i = i + 2
+    }
+    return fallback
+}
+
+// compose_repositories merges two in-process adapters.
+public func compose_repositories(a, b) {
+    let out = a
+    let i = 0
+    while (i < len(b)) {
+        out = insert(out, b[i], b[i + 1])
+        i = i + 2
+    }
+    return out
+}

@@ -34,7 +34,7 @@ try {
     $out = Invoke-Karkain @('test', $combined); $code = $LASTEXITCODE
     Write-Output "TEST native: exit=$code"; Write-Output $out
     if ($code -ne 0) { throw 'native tests failed' }
-    if ($out -notlike '*9 tests, 9 passed, 0 failed*') { throw 'native test summary mismatch' }
+    if ($out -notlike '*19 tests, 19 passed, 0 failed*') { throw 'native test summary mismatch' }
 
     $verify = Join-Path $repo 'src\verify.kark'
     $out = Invoke-Karkain @('run', $verify); $code = $LASTEXITCODE
@@ -54,6 +54,16 @@ try {
     $out = Invoke-Karkain @('run', (Join-Path $exDir 'user_repository.kark')); $code = $LASTEXITCODE
     Write-Output "RUN example: exit=$code"; Write-Output $out
     if ($code -ne 0) { throw 'example failed' }    if ($out -notlike '*count=3*') { throw 'example check missing' }
+    $advDir = Join-Path $tmp 'advanced'
+    New-Item -ItemType Directory -Path $advDir | Out-Null
+    Copy-Item -LiteralPath $module -Destination (Join-Path $advDir 'repository.kark')
+    Copy-Item -LiteralPath (Join-Path $repo 'examples\query_spec.kark') -Destination (Join-Path $advDir 'query_spec.kark')
+    $out = Invoke-Karkain @('run', (Join-Path $advDir 'query_spec.kark')); $code = $LASTEXITCODE
+    Write-Output "RUN advanced example: exit=$code"; Write-Output $out
+    if ($code -ne 0) { throw 'advanced example failed' }
+    if ($out -notlike '*matched=2*') { throw 'advanced filter output missing' }
+    if ($out -notlike '*tx=committed*') { throw 'advanced transaction output missing' }
+
     Write-Output 'VERIFY: ALL GATES PASSED'
 }
 finally {
